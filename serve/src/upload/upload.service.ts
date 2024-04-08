@@ -37,6 +37,33 @@ export class UploadService {
     }
   }
 
+  // 黑白图片上色
+
+  async createColor(img: any) {
+    const imgBase = await readFile(img.path, { encoding: 'base64' });
+    const imgBase64 = this.prefix + imgBase;
+    const { expires, access_token } = await this.readTokenFile();
+    if (expires && expires > new Date().getTime()) {
+      const res = await post(
+        AIIMGAPI.postImageColorization,
+        {
+          image: imgBase64,
+        },
+        {
+          params: {
+            access_token,
+          },
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        },
+      );
+      return { image: this.prefix + res.data.image };
+    } else {
+      await this.imgAccessToken();
+      this.create(img);
+    }
+  }
   // 获取文件中的token信息
   async readTokenFile() {
     let token = '';
