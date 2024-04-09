@@ -13,6 +13,7 @@ import { UploadService } from './upload.service';
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 
+  // 图片效果增强
   @Post('enhance')
   @UseInterceptors(FileInterceptor('img'))
   create(@UploadedFile() img: any) {
@@ -20,10 +21,18 @@ export class UploadController {
     return this.uploadService.create(img);
   }
 
+  // 黑白图片上色
   @Post('/process')
   @UseInterceptors(FileInterceptor('img'))
   createProcess(@UploadedFile() img: any) {
     return this.uploadService.createColor(img);
+  }
+
+  // 图片降噪，固定降噪值
+  @Post('denoise')
+  @UseInterceptors(FileInterceptor('img'))
+  createDenoise(@UploadedFile() img: any) {
+    return this.uploadService.createNoiseReduction(img);
   }
 
   @Get()

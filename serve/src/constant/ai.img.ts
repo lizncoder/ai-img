@@ -13,4 +13,7 @@ export const AIIMGAPI = {
   // 黑白图片上色
   postImageColorization:
     'https://aip.baidubce.com/rest/2.0/image-process/v1/colourize',
+  // 图片降噪
+  postImageDenoise:
+    'https://aip.baidubce.com/rest/2.0/image-process/v1/denoise',
 };

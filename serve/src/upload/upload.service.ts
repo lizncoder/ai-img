@@ -10,60 +10,6 @@ export class UploadService {
   private img_access_token: string;
   private img_access_token_expires: number;
 
-  // 修复图片
-  async create(img: any) {
-    const imgBase = await readFile(img.path, { encoding: 'base64' });
-    const imgBase64 = this.prefix + imgBase;
-    const { expires, access_token } = await this.readTokenFile();
-    if (expires && expires > new Date().getTime()) {
-      const res = await post(
-        AIIMGAPI.postImageDefinitionEnhance,
-        {
-          image: imgBase64,
-        },
-        {
-          params: {
-            access_token,
-          },
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        },
-      );
-      return { image: this.prefix + res.data.image };
-    } else {
-      await this.imgAccessToken();
-      this.create(img);
-    }
-  }
-
-  // 黑白图片上色
-
-  async createColor(img: any) {
-    const imgBase = await readFile(img.path, { encoding: 'base64' });
-    const imgBase64 = this.prefix + imgBase;
-    const { expires, access_token } = await this.readTokenFile();
-    if (expires && expires > new Date().getTime()) {
-      const res = await post(
-        AIIMGAPI.postImageColorization,
-        {
-          image: imgBase64,
-        },
-        {
-          params: {
-            access_token,
-          },
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        },
-      );
-      return { image: this.prefix + res.data.image };
-    } else {
-      await this.imgAccessToken();
-      this.create(img);
-    }
-  }
   // 获取文件中的token信息
   async readTokenFile() {
     let token = '';
@@ -96,6 +42,69 @@ export class UploadService {
     return { expires, access_token };
   }
 
+  // 发送ai处理图片
+  async sendImg(args) {
+    const { img, apiOptions, resField, callback } = args;
+    const { api, body = {} } = apiOptions;
+    const imgBase = await readFile(img.path, { encoding: 'base64' });
+    const imgBase64 = this.prefix + imgBase;
+
+    const { expires, access_token } = await this.readTokenFile();
+
+    // 判断token是否过期
+    if (expires && expires > new Date().getTime()) {
+      const res = await post(
+        api,
+        {
+          image: imgBase64,
+          ...body,
+        },
+        {
+          params: {
+            access_token,
+          },
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        },
+      );
+      console.log('发送图片', res.data);
+      return { image: this.prefix + res.data[resField ?? 'image'] };
+    } else {
+      await this.imgAccessToken();
+      callback(img);
+    }
+  }
+
+  // 修复图片
+  async create(img: any) {
+    return this.sendImg({
+      img,
+      apiOptions: { api: AIIMGAPI.postImageDefinitionEnhance },
+      callback: this.create,
+    });
+  }
+
+  // 黑白图片上色
+  async createColor(img: any) {
+    return this.sendImg({
+      img,
+      apiOptions: { api: AIIMGAPI.postImageColorization },
+      callback: this.create,
+    });
+  }
+
+  // 图片降噪
+  async createNoiseReduction(img: any) {
+    return this.sendImg({
+      img,
+      apiOptions: { api: AIIMGAPI.postImageDenoise, body: { option: 100 } },
+      resField: 'result',
+      callback: this.create,
+    });
+  }
+
+  // 获取ai接口access_token
   async imgAccessToken() {
     const res = await get('https://aip.baidubce.com/oauth/2.0/token', {
       params: {
